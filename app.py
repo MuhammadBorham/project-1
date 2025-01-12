@@ -217,19 +217,42 @@ def remove_book():
 
 def borrow_book():
     book_id = input("Enter Book ID to borrow: ")
-    if library.borrow_book(book_id):
-        print("Book borrowed successfully.")
-    else:
-        print("Book not available or already borrowed. Please try again.")
     
+    for book in library.books:
+        if book.book_id == book_id:
+            print(f"Total copies available: {book.available_quantity()}")
+            copies_to_borrow = int(input("Enter number of copies to borrow: "))
+            
+            if copies_to_borrow > book.available_quantity():
+                print("Error: Not enough copies available to borrow.")
+                return
+            
+            book.borrowed += copies_to_borrow
+            library.save_books()
+            print(f"{copies_to_borrow} copies borrowed successfully.")
+            return
+    
+    print("Book not found. Please try again.")
 
 
 def return_book():
     book_id = input("Enter Book ID to return: ")
-    if library.return_book(book_id):
-        print("Book returned successfully.")
-    else:
-        print("Book not found or not borrowed. Please try again.")
+    
+    for book in library.books:
+        if book.book_id == book_id:
+            print(f"Copies currently borrowed: {book.borrowed}")
+            copies_to_return = int(input("Enter number of copies to return: "))
+            
+            if copies_to_return > book.borrowed:
+                print("Error: You cannot return more copies than you have borrowed.")
+                return
+            
+            book.borrowed -= copies_to_return
+            library.save_books()
+            print(f"{copies_to_return} copies returned successfully.")
+            return
+    
+    print("Book not found. Please try again.")
 
 
 # Helper function to handle input with validation
