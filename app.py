@@ -1,269 +1,265 @@
 import os
 import json
 
-# Book and Library classes
-class Book:
-    def __init__(self, book_id, title, author, quantity, borrowed=0):
-        self.book_id = book_id
-        self.title = title
-        self.author = author
-        self.quantity = quantity  # Total quantity of the book
-        self.borrowed = borrowed  # Number of borrowed copies
+# Constants for file paths
+BOOKS_FILE = "books.json"
+BORROWED_FILE = "borrowed_books.json"
+USERS_FILE = "users.json"
 
-    def available_quantity(self):
-        return self.quantity - self.borrowed
+# Data Structures
+books = []  # List of book dictionaries
+borrowed_books = {}  # Book ID mapped to a list of borrower names
+users = {}  # Username mapped to user details
 
-    def to_dict(self):
-        return {
-            "book_id": self.book_id,
-            "title": self.title,
-            "author": self.author,
-            "quantity": self.quantity,
-            "borrowed": self.borrowed
-        }
+# File Handling Functions
+def save_data_to_file(file_name, data):
+    """Save data to a JSON file."""
+    try:
+        with open(file_name, "w") as file:
+            json.dump(data, file, indent=4)
+    except (IOError, json.JSONDecodeError) as e:
+        print(f"Error saving data to {file_name}: {e}")
 
-    @classmethod
-    def from_dict(cls, data): 
-        return cls(data["book_id"], data["title"], data["author"], data["quantity"], data["borrowed"])
-
-
-
-class Library:
-    FILE_PATH = "library_books.json"
-
-    def __init__(self):
-        self.books = self.load_books()
-
-    def add_book(self, book):
-        for b in self.books:
-            if b.book_id == book.book_id:
-                b.quantity += book.quantity
-                self.save_books()
-                return True
-        self.books.append(book)
-        self.save_books()
-        return True
-
-    def remove_book(self, book_id):
-        for book in self.books:
-            if book.book_id == book_id:
-                self.books.remove(book)
-                self.save_books()
-                return True
-        return False
-
-    def borrow_book(self, book_id):
-        for book in self.books:
-            if book.book_id == book_id and book.available_quantity() > 0:
-                book.borrowed += 1
-                self.save_books()
-                return True
-        return False
-
-    def return_book(self, book_id):
-        for book in self.books:
-            if book.book_id == book_id and book.borrowed > 0:
-                book.borrowed -= 1
-                self.save_books()
-                return True
-        return False
-
-    def list_books(self):
-        return self.books
-
-    def save_books(self):
-        with open(self.FILE_PATH, "w") as file:
-            json.dump([book.to_dict() for book in self.books], file)
-
-    def load_books(self):
-        if os.path.exists(self.FILE_PATH):
-            with open(self.FILE_PATH, "r") as file:
+def load_data_from_file(file_name, default_data):
+    """Load data from a JSON file or return default data if file doesn't exist."""
+    try:
+        if os.path.exists(file_name):
+            with open(file_name, "r") as file:
                 data = json.load(file)
-                return [Book.from_dict(item) for item in data]
-        return []
+                if not isinstance(data, type(default_data)):  # Ensure data type consistency
+                    return default_data
+                return data
+        return default_data
+    except (IOError, json.JSONDecodeError) as e:
+        print(f"Error loading data from {file_name}: {e}")
+        return default_data
 
-    def search_and_select_books(self):
-        keyword = input("Enter keyword to search: ")
-        found_books = [book for book in self.books if keyword.lower() in book.title.lower() or keyword.lower() in book.author.lower()]
-        
-        if found_books:
-            print("\nSearch Results:")
-            for index, book in enumerate(found_books, start=1):
-                print(f"{index}. ID: {book.book_id}, Title: {book.title}, Author: {book.author}, Total: {book.quantity}, Borrowed: {book.borrowed}, Available: {book.available_quantity()}")
-            
-            options = [str(i) for i in range(len(found_books) + 1)]
-            choice = get_input("\nSelect a book by number (or 0 to cancel): ", options)
-            
-            if choice == "0":
-                print("Search canceled.")
-                return
-            else:
-                selected_book = found_books[int(choice) - 1]
-                print(f"\nYou selected: ID: {selected_book.book_id}, Title: {selected_book.title}, Author: {selected_book.author}")
-                self.next_action(selected_book)
-        else:
-            print("\nNo books found matching the keyword.")
+# User Management Functions
+def sign_up(username, password, other_details, role="user"):
+    """Sign up a new user."""
+    if username in users:
+        print("Error: Username already exists.")
+        return False
+    try:
+        users[username] = {
+            "password": password,
+            "role": role,
+            "other_details": other_details
+        }
+        save_data_to_file(USERS_FILE, users)
+        print("Sign-up successful.")
+        return True
+    except Exception as e:
+        print(f"Error during sign-up: {e}")
+        return False
 
-    def next_action(self, book):
-        options = ["1", "2", "3"]
-        while True:
-            print("\nWhat would you like to do with this book?")
-            print("1. Borrow Book")
-            print("2. Return Book")
-            print("3. Back to Main Menu")
-            
-            choice = get_input("Enter your choice: ", options)
+def log_in(username, password):
+    """Log in an existing user."""
+    try:
+        user = users.get(username)
+        if not user or user["password"] != password:
+            print("Error: Invalid username or password.")
+            return None
+        print(f"Welcome, {username}! Role: {user['role']}")
+        return username, user["role"]
+    except KeyError as e:
+        print(f"Error during login: {e}")
+        return None
 
-            if choice == "1":
-                if library.borrow_book(book.book_id):
-                    print("Book borrowed successfully.")
-                else:
-                    print("Book not available or already borrowed. Please try again.")
-            elif choice == "2":
-                if not book.borrowed:
-                    print("This book is not borrowed.")
-                else:
-                    self.return_book(book.book_id)
-                    print("Book returned successfully.")
-            elif choice == "3":
-                print("Returning to main menu...")
-                break
+def add_admin(username, password, other_details):
+    """Add a new admin user."""
+    sign_up(username, password, other_details, "admin")
 
-
-# Initialize library
-library = Library()
-
-# Main menu function
-def main_menu():
-    options = ["1", "2", "3", "4", "5","6","7"]
-    while True:
-        print("\nLibrary Management System")
-        print("1. List Books")
-        print("2. Add Book")
-        print("3. Remove Book")
-        print("4. Search Books")
-        print("5. Bowrrow Book")
-        print("6. Return Book")
-        print("7. Exit")
-        
-        choice = get_input("Enter your choice: ", options)
-
-        if choice == "1":
-            list_books()
-        elif choice == "2":
-            add_book()
-        elif choice == "3":
-            remove_book()
-        elif choice == "4":
-            library.search_and_select_books()
-        elif choice == "5" :
-            borrow_book()
-        elif choice == "6":
-            return_book()       
-        elif choice == "7":
-            print("Exiting the system. Goodbye!")
-            break
-
-
-# Function to list all books
-def list_books():
-    books = library.list_books()
-    if books:
-        print("\nList of Books:")
+# Book Management Functions
+def add_book(book_id, title, author, copies):
+    """Add or update a book in the library."""
+    try:
         for book in books:
-            status = "Borrowed" if book.borrowed > 0 else "Available"
-            print(f"ID: {book.book_id}, Title: {book.title}, Author: {book.author}, Total: {book.quantity}, Borrowed: {book.borrowed}, Available: {book.available_quantity()}, Status: {status}")
-    else:
-        print("\nNo books available in the library.")
-
-
-# Function to add a new book
-def add_book():
-    book_id = input("Enter Book ID: ")
-    title = input("Enter Book Title: ")
-    author = input("Enter Book Author: ")
-    quantity = int(input("Enter Quantity: "))
-    if library.add_book(Book(book_id, title, author,quantity)):
+            if book["id"] == book_id:
+                book["available_copies"] += copies
+                save_data_to_file(BOOKS_FILE, books)
+                print("Book updated successfully.")
+                return
+        books.append({"id": book_id, "title": title, "author": author, "available_copies": copies})
+        save_data_to_file(BOOKS_FILE, books)
         print("Book added successfully.")
-    else:
-        print("Book ID already exists. Please try again.")
+    except Exception as e:
+        print(f"Error adding or updating book: {e}")
 
+def remove_book(book_id):
+    """Remove a book from the library."""
+    try:
+        global books
+        books = [book for book in books if book["id"] != book_id]
+        save_data_to_file(BOOKS_FILE, books)
+        print("Book removed successfully.")
+    except Exception as e:
+        print(f"Error removing book: {e}")
 
-# Function to remove a book
-def remove_book():
-    book_id = input("Enter Book ID to remove: ")
-    
-    for book in library.books:
-        if book.book_id == book_id:
-            print(f"Total copies available: {book.quantity}")
-            copies_to_remove = int(input("Enter number of copies to remove: "))
-            
-            if copies_to_remove > book.quantity:
-                print("Error: You cannot remove more copies than currently available.")
+def search_book(query):
+    """Search for books by title or author."""
+    try:
+        results = [book for book in books if query.lower() in book["title"].lower() or query.lower() in book["author"].lower()]
+        if results:
+            for book in results:
+                print(f"ID: {book['id']}, Title: {book['title']}, Author: {book['author']}, Available: {book['available_copies']}")
+        else:
+            print("No books found.")
+    except Exception as e:
+        print(f"Error searching for books: {e}")
+
+# Borrow Management Functions
+def borrow_book(book_id, borrower_name):
+    """Borrow a book from the library."""
+    try:
+        for book in books:
+            if book["id"] == book_id and book["available_copies"] > 0:
+                book["available_copies"] -= 1
+                borrowed_books.setdefault(book_id, []).append(borrower_name)
+                save_data_to_file(BOOKS_FILE, books)
+                save_data_to_file(BORROWED_FILE, borrowed_books)
+                print("Book borrowed successfully.")
                 return
-            
-            book.quantity -= copies_to_remove
-            
-            if book.quantity == 0:
-                library.books.remove(book)
-                print("All copies removed. Book deleted from the library.")
-            else:
-                library.save_books()
-                print(f"{copies_to_remove} copies removed. Remaining copies: {book.quantity}")
-            
-            return
-    
-    print("Book not found. Please try again.")
+        print("Error: Book not available.")
+    except Exception as e:
+        print(f"Error borrowing book: {e}")
 
-def borrow_book():
-    book_id = input("Enter Book ID to borrow: ")
-    
-    for book in library.books:
-        if book.book_id == book_id:
-            print(f"Total copies available: {book.available_quantity()}")
-            copies_to_borrow = int(input("Enter number of copies to borrow: "))
-            
-            if copies_to_borrow > book.available_quantity():
-                print("Error: Not enough copies available to borrow.")
-                return
-            
-            book.borrowed += copies_to_borrow
-            library.save_books()
-            print(f"{copies_to_borrow} copies borrowed successfully.")
-            return
-    
-    print("Book not found. Please try again.")
+def return_book(book_id, borrower_name):
+    """Return a borrowed book to the library."""
+    try:
+        if book_id in borrowed_books and borrower_name in borrowed_books[book_id]:
+            borrowed_books[book_id].remove(borrower_name)
+            for book in books:
+                if book["id"] == book_id:
+                    book["available_copies"] += 1
+                    break
+            save_data_to_file(BOOKS_FILE, books)
+            save_data_to_file(BORROWED_FILE, borrowed_books)
+            print("Book returned successfully.")
+        else:
+            print("Error: No record of this book being borrowed by this user.")
+    except Exception as e:
+        print(f"Error returning book: {e}")
 
+def list_borrowed_books():
+    """List all borrowed books and their borrowers."""
+    try:
+        for book_id, borrowers in borrowed_books.items():
+            book = next((b for b in books if b["id"] == book_id), None)
+            if book:
+                print(f"ID: {book_id}, Title: {book['title']}, Borrowers: {', '.join(borrowers)}")
+    except Exception as e:
+        print(f"Error listing borrowed books: {e}")
 
-def return_book():
-    book_id = input("Enter Book ID to return: ")
-    
-    for book in library.books:
-        if book.book_id == book_id:
-            print(f"Copies currently borrowed: {book.borrowed}")
-            copies_to_return = int(input("Enter number of copies to return: "))
-            
-            if copies_to_return > book.borrowed:
-                print("Error: You cannot return more copies than you have borrowed.")
-                return
-            
-            book.borrowed -= copies_to_return
-            library.save_books()
-            print(f"{copies_to_return} copies returned successfully.")
-            return
-    
-    print("Book not found. Please try again.")
+# Utility Functions
+def display_menu(role):
+    """Display the menu based on user role."""
+    menu = {
+        "admin": [
+            "1. Add Book", "2. Remove Book", "3. Search Book", "4. View Borrowed Books", "5. Add Admin", "6. Log Out"
+        ],
+        "user": [
+            "1. Search Book", "2. Borrow Book", "3. Return Book", "4. Log Out"
+        ]
+    }
+    print(f"\n{'Admin' if role == 'admin' else 'User'} Menu")
+    for option in menu.get(role, []):
+        print(option)
 
+def get_user_input(prompt):
+    """Get input from the user."""
+    try:
+        return input(prompt).strip()
+    except Exception as e:
+        print(f"Error getting user input: {e}")
+        return ""
 
-# Helper function to handle input with validation
-def get_input(prompt, valid_options):
+# Main Workflow
+def main():
+    """Main function to run the Library Management System."""
+    global books, borrowed_books, users
+
+    # Load data
+    books = load_data_from_file(BOOKS_FILE, [])
+    borrowed_books = load_data_from_file(BORROWED_FILE, {})
+    users = load_data_from_file(USERS_FILE, {})
+
+    current_user = None
     while True:
-        user_input = input(prompt)
-        if user_input in valid_options:
-            return user_input
-        print("Invalid input. Please try again.")
+        try:
+            if not current_user:
+                print("\nWelcome to the Library Management System")
+                print("1. Sign Up")
+                print("2. Log In")
+                print("3. Exit")
 
+                choice = get_user_input("Enter your choice: ")
 
-# Run the program
+                if choice == "1":
+                    username = get_user_input("Enter username: ")
+                    password = get_user_input("Enter password: ")
+                    email = get_user_input("Enter email: ")
+                    phone = get_user_input("Enter phone: ")
+                    role = get_user_input("Enter role (admin/user): ")
+                    sign_up(username, password, {"email": email, "phone": phone}, role)
+
+                elif choice == "2":
+                    username = get_user_input("Enter username: ")
+                    password = get_user_input("Enter password: ")
+                    current_user = log_in(username, password)
+
+                elif choice == "3":
+                    print("Exiting the system. Goodbye!")
+                    break
+
+                else:
+                    print("Invalid choice. Please try again.")
+            else:
+                username, role = current_user
+                display_menu(role)
+                choice = get_user_input("Enter your choice: ")
+
+                if role == "admin":
+                    if choice == "1":
+                        book_id = get_user_input("Enter Book ID: ")
+                        title = get_user_input("Enter Book Title: ")
+                        author = get_user_input("Enter Book Author: ")
+                        copies = int(get_user_input("Enter number of copies: "))
+                        add_book(book_id, title, author, copies)
+                    elif choice == "2":
+                        book_id = get_user_input("Enter Book ID to remove: ")
+                        remove_book(book_id)
+                    elif choice == "3":
+                        query = get_user_input("Enter search query: ")
+                        search_book(query)
+                    elif choice == "4":
+                        list_borrowed_books()
+                    elif choice == "5":
+                        admin_username = get_user_input("Enter new admin username: ")
+                        admin_password = get_user_input("Enter password: ")
+                        admin_email = get_user_input("Enter email: ")
+                        admin_phone = get_user_input("Enter phone: ")
+                        add_admin(admin_username, admin_password, {"email": admin_email, "phone": admin_phone})
+                    elif choice == "6":
+                        current_user = None
+                    else:
+                        print("Invalid choice. Please try again.")
+                else:
+                    if choice == "1":
+                        query = get_user_input("Enter search query: ")
+                        search_book(query)
+                    elif choice == "2":
+                        book_id = get_user_input("Enter Book ID to borrow: ")
+                        borrow_book(book_id, username)
+                    elif choice == "3":
+                        book_id = get_user_input("Enter Book ID to return: ")
+                        return_book(book_id, username)
+                    elif choice == "4":
+                        current_user = None
+                    else:
+                        print("Invalid choice. Please try again.")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
 if __name__ == "__main__":
-    main_menu()
+    main()
