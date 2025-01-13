@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+</head>
+<body>
+    <h1>Library Management System</h1>
+    <a href="{{ url_for('add_book') }}">Add Book</a> | 
+    <a href="{{ url_for('search_books') }}">Search Books</a>
+    <h2>Book List</h2>
+    <ul>
+        {% for book in books %}
+            <li>
+                {{ book.title }} by {{ book.author }} (ID: {{ book.book_id }}) - 
+                {{ "Borrowed" if book.is_borrowed else "Available" }}
+                <a href="{{ url_for('borrow_book', book_id=book.book_id) }}">Borrow</a> | 
+                <a href="{{ url_for('return_book', book_id=book.book_id) }}">Return</a> | 
+                <a href="{{ url_for('remove_book', book_id=book.book_id) }}">Remove</a>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
