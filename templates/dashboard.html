@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+        .container {
+            padding: 20px;
+        }
+        .welcome-message {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .search-form {
+            margin-bottom: 20px;
+        }
+        .search-form input {
+            padding: 10px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .search-form button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .book-list {
+            list-style: none;
+            padding: 0;
+        }
+        .book-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .book-item a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .book-item a:hover {
+            text-decoration: underline;
+        }
+        .book-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .book-actions button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .book-actions .borrow-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        .book-actions .remove-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .pagination a {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .pagination a:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('add_book') }}">Add Book</a>
+                <a href="{{ url_for('add_author') }}">Add Author</a>
+                <a href="{{ url_for('borrowed_books') }}">Borrowed Books</a>
+            {% endif %}
+        </div>
+        <div>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="welcome-message">{{ welcome_message }}</div>
+
+        <!-- Search Form -->
+        <form class="search-form" method="GET" action="{{ url_for('dashboard') }}">
+            <input type="text" name="search" placeholder="Search books..." value="{{ search_query }}">
+            <button type="submit">Search</button>
+        </form>
+
+        <!-- Book List -->
+        <ul class="book-list">
+            {% for book in books.items %}
+                <li class="book-item">
+                    <div>
+                        <a href="{{ url_for('book_details', book_id=book.id) }}">{{ book.title }}</a> by {{ book.author.name }}
+                        <p>Available: {{ book.quantity - book.borrowed }}</p>
+                    </div>
+                    <div class="book-actions">
+                        {% if current_user.is_admin %}
+                            <form method="POST" action="{{ url_for('remove_book', book_id=book.id) }}" style="display:inline;">
+                                <button type="submit" class="remove-btn">Remove</button>
+                            </form>
+                        {% endif %}
+                        {% if book.quantity > book.borrowed %}
+                            <form method="POST" action="{{ url_for('borrow_book', book_id=book.id) }}" style="display:inline;">
+                                <button type="submit" class="borrow-btn">Borrow</button>
+                            </form>
+                        {% else %}
+                            <span>Out of stock</span>
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            {% if books.has_prev %}
+                <a href="{{ url_for('dashboard', page=books.prev_num, search=search_query) }}">Previous</a>
+            {% endif %}
+            {% if books.has_next %}
+                <a href="{{ url_for('dashboard', page=books.next_num, search=search_query) }}">Next</a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

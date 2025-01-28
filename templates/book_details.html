@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book.title }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+        .container {
+            padding: 20px;
+        }
+        .book-details {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .book-details h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .book-details p {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .book-details .author-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        .book-details .author-info h2 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .book-details .actions {
+            margin-top: 20px;
+        }
+        .book-details .actions button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .book-details .actions button:hover {
+            background-color: #0056b3;
+        }
+        .back-link {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            {% if current_user.is_admin %}
+                <a href="{{ url_for('add_book') }}">Add Book</a>
+                <a href="{{ url_for('add_author') }}">Add Author</a>
+                <a href="{{ url_for('borrowed_books') }}">Borrowed Books</a>
+            {% endif %}
+        </div>
+        <div>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="book-details">
+            <h1>{{ book.title }}</h1>
+            <p><strong>Author:</strong> {{ author.name }}</p>
+            <p><strong>Description:</strong> {{ book.description }}</p>
+            <p><strong>Available Copies:</strong> {{ book.quantity - book.borrowed }}</p>
+
+            <div class="author-info">
+                <h2>About the Author</h2>
+                <p>{{ author.bio }}</p>
+            </div>
+
+            <div class="actions">
+                {% if current_user.is_authenticated %}
+                    {% if book.quantity > book.borrowed %}
+                        <form method="POST" action="{{ url_for('borrow_book', book_id=book.id) }}">
+                            <button type="submit">Borrow</button>
+                        </form>
+                    {% else %}
+                        <p>Out of stock</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <a href="{{ url_for('dashboard') }}" class="back-link">Back to Dashboard</a>
+    </div>
+</body>
+</html>

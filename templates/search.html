@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+        .container {
+            padding: 20px;
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        button {
+            padding: 6px 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        p {
+            text-align: center;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div>
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Search Results for "{{ search_query }}"</h1>
+
+        <!-- Books List -->
+        <ul>
+            {% for book in books %}
+                <li>
+                    <a href="{{ url_for('book_details', book_id=book.id) }}">{{ book.title }}</a> by {{ book.author.name }}<br>
+                    (Available: {{ book.quantity - book.borrowed }}, Borrowed: {{ book.borrowed }})
+                    
+                    <!-- Borrow Button -->
+                    {% if book.quantity > book.borrowed %}
+                        <form action="{{ url_for('borrow_book', book_id=book.id) }}" method="POST" style="display: inline;">
+                            <button type="submit">Borrow</button>
+                        </form>
+                    {% else %}
+                        <span>(Not Available)</span>
+                    {% endif %}
+
+                    <!-- Return Button -->
+                    {% if current_user.is_admin or book.borrowed_by.filter_by(user_id=current_user.id).first() %}
+                        <form action="{{ url_for('return_book', book_id=book.id) }}" method="POST" style="display: inline;">
+                            <button type="submit">Return</button>
+                        </form>
+                    {% endif %}
+
+                    <!-- Remove Button (Admin Only) -->
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('remove_book', book_id=book.id) }}">Remove</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+
+        <!-- Back to Dashboard Link -->
+        <p><a href="{{ url_for('dashboard') }}">Back to Dashboard</a></p>
+    </div>
+</body>
+</html>
