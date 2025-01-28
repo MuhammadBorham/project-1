@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Borrowed Books</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+        .container {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .book-list {
+            list-style: none;
+            padding: 0;
+        }
+        .book-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .book-item h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #007bff;
+        }
+        .book-item h2:hover {
+            text-decoration: underline;
+        }
+        .borrowed-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0;
+        }
+        .borrowed-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .borrowed-item p {
+            margin: 0;
+            color: #555;
+        }
+        .borrowed-item button {
+            margin-top: 5px;
+            padding: 5px 10px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .borrowed-item button:hover {
+            background-color: #c82333;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Styles for user info */
+        .borrower-info {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .username {
+            color: #007bff;
+            cursor: pointer;
+        }
+
+        .username:hover {
+            text-decoration: underline;
+        }
+        .user-info {
+            display: none;
+            margin-top: 10px;
+            background-color: #f4f4f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .user-info.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('add_book') }}">Add Book</a>
+            <a href="{{ url_for('add_author') }}">Add Author</a>
+            <a href="{{ url_for('borrowed_books') }}">Borrowed Books</a>
+        </div>
+        <div>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 class="title">Borrowed Books</h1>
+        <ul class="book-list">
+            {% for book, borrowed_books in borrowed_books.items() %}
+                <li class="book-item">
+                    <h2>{{ book.title }}</h2>
+                    <p>by {{ book.author.name }}</p>
+                    <ul class="borrowed-list">
+                        {% for borrowed_book in borrowed_books %}
+                            <li class="borrowed-item">
+                                <p><strong>Borrowed by:</strong> 
+                                    <span class="username" onclick="toggleUserInfo('{{ borrowed_book.user.id }}', '{{ book.id }}')">
+                                        {{ borrowed_book.user.username }}
+                                    </span>
+                                    on {{ borrowed_book.borrowed_at.strftime('%d/%m - %H:%M') }}
+                                </p>
+
+                                <!-- Borrower's information -->
+                                <div class="borrower-info" id="user-info-{{ borrowed_book.user.id }}-{{ book.id }}">
+                                    <p><strong>Email:</strong> {{ borrowed_book.user.email }}</p>
+                                    <p><strong>Phone:</strong> {{ borrowed_book.user.phone_number }}</p>
+                                </div>
+
+                                <!-- Return Button -->
+                                <form method="POST" action="{{ url_for('return_book', book_id=book.id) }}" style="display:inline;">
+                                    <button type="submit">Return</button>
+                                </form>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endfor %}
+        </ul>
+        <a href="{{ url_for('dashboard') }}" class="back-link">Back to Dashboard</a>
+    </div>
+
+    <script>
+        // JavaScript function to toggle the visibility of user info
+        function toggleUserInfo(userId, bookId) {
+            const userInfoDiv = document.getElementById('user-info-' + userId + '-' + bookId);
+            if (userInfoDiv.style.display === "none" || userInfoDiv.style.display === "") {
+                userInfoDiv.style.display = "block";
+            } else {
+                userInfoDiv.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
